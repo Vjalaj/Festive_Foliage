@@ -1,0 +1,76 @@
+/* Improved snowflake animation */
+.snowflake {
+  position: absolute;
+  top: -20px;
+  background: radial-gradient(circle at 30% 30%, #ffffff, #e8f4ff);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: snowfall linear infinite;
+  box-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
+}
+
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  95% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(var(--sway, 30px)) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Add subtle horizontal sway with varying amplitudes */
+.snowflake:nth-child(odd) {
+  animation-name: snowfall-left;
+}
+
+@keyframes snowfall-left {
+  0% {
+    transform: translateY(-10px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) translateX(calc(var(--sway, 30px) * -0.5)) rotate(180deg);
+  }
+  95% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(var(--sway, 30px)) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.snowflake:nth-child(even) {
+  animation-name: snowfall-right;
+}
+
+@keyframes snowfall-right {
+  0% {
+    transform: translateY(-10px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) translateX(calc(var(--sway, 30px) * 0.5)) rotate(-180deg);
+  }
+  95% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(calc(var(--sway, 30px) * -1)) rotate(-360deg);
+    opacity: 0;
+  }
+}
