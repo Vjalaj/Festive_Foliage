@@ -22,6 +22,7 @@
   <a href="#-demo">Demo</a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-deploy-to-vercel">Deploy</a> •
+  <a href="#-share-with-ngrok-free-tunneling">ngrok</a> •
   <a href="#-admin-access">Admin</a> •
   <a href="#-contributing">Contributing</a>
 </p>
@@ -137,7 +138,56 @@ NEXT_PUBLIC_MUSIC_FILE=/music/christmas.mp3
 
 ---
 
-## 🔐 Admin Access
+## � Share with ngrok (Free Tunneling)
+
+Want to share your local tree with friends without deploying? Use ngrok!
+
+### Prerequisites
+
+1. Install ngrok: [ngrok.com/download](https://ngrok.com/download)
+2. Sign up for a free account at [ngrok.com](https://ngrok.com)
+3. Add your authtoken: `ngrok config add-authtoken YOUR_TOKEN`
+
+### Quick Start
+
+```bash
+# Terminal 1: Start your dev server
+npm run dev
+
+# Terminal 2: Start ngrok tunnel
+ngrok http 9002
+```
+
+Copy the `https://xxxx-xxxx.ngrok-free.app` URL and share it! 🎉
+
+### ⚠️ ngrok Free Tier Limitations
+
+| Feature | Free Tier | What This Means |
+|---------|-----------|-----------------|
+| **Sessions** | 1 tunnel at a time | Close other tunnels first |
+| **URLs** | Random URL each session | URL changes when you restart ngrok |
+| **Interstitial** | Shows ngrok warning page | First-time visitors see a "Visit Site" button |
+| **Bandwidth** | Limited | Fine for small groups |
+| **Connections** | 40/minute | Good for ~20 concurrent users |
+
+### Tips for Best Experience
+
+1. **Share the ngrok URL** — Not your localhost URL
+2. **Keep both terminals open** — Dev server + ngrok must run together
+3. **Warn users about interstitial** — First visit shows ngrok's warning page (click "Visit Site")
+4. **Persistent URLs** — Upgrade to ngrok paid for stable URLs
+
+### Alternative Free Tunnels
+
+| Service | Command | Notes |
+|---------|---------|-------|
+| [localtunnel](https://localtunnel.me) | `npx localtunnel --port 9002` | No account needed |
+| [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/) | `cloudflared tunnel --url http://localhost:9002` | Cloudflare account |
+| [serveo](https://serveo.net) | `ssh -R 80:localhost:9002 serveo.net` | No install needed |
+
+---
+
+## �🔐 Admin Access
 
 Navigate to `/admin` to access the admin dashboard:
 
