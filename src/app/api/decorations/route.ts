@@ -11,6 +11,23 @@ if (process.env.BLOB_READ_WRITE_TOKEN) {
 const DATA_PATH = path.join(process.cwd(), 'data', 'decorations.json');
 const BLOB_FILENAME = 'decorations.json';
 
+// Simple mutex lock to prevent concurrent file writes causing corruption
+let writeLock: Promise<void> = Promise.resolve();
+
+async function withLock<T>(fn: () => Promise<T>): Promise<T> {
+  // Chain onto the existing lock
+  const currentLock = writeLock;
+  let release: () => void;
+  writeLock = new Promise<void>((resolve) => { release = resolve; });
+  
+  await currentLock; // Wait for previous operations to complete
+  try {
+    return await fn();
+  } finally {
+    release!();
+  }
+}
+
 async function readData() {
   try {
     // If running on Vercel with Blob storage configured
@@ -76,34 +93,35 @@ export async function PATCH(req: Request) {
   const { id, percentX, percentY, x, y } = body;
   if (!id) return new NextResponse(JSON.stringify({ error: 'Missing id' }), { status: 400 });
 
-  const decorations = await readData();
-  const idx = decorations.findIndex((d: any) => d.id === id);
-  if (idx === -1) return new NextResponse(JSON.stringify({ error: 'Not found' }), { status: 404 });
+  return await withLock(async () => {
+    const decorations = await readData();
+    const idx = decorations.findIndex((d: any) => d.id === id);
+    if (idx === -1) return new NextResponse(JSON.stringify({ error: 'Not found' }), { status: 404 });
 
-  const target = decorations[idx];
+    const target = decorations[idx];
 
-  // Anyone can move decorations (position updates only)
-  // apply updates
-  if (typeof percentX === 'number' && typeof percentY === 'number') {
-    target.percentX = percentX;
-    target.percentY = percentY;
-    // also store x/y if provided
-    if (typeof x === 'number') target.x = x;
-    if (typeof y === 'number') target.y = y;
-  } else if (typeof x === 'number' && typeof y === 'number') {
-    target.x = x;
-    target.y = y;
-  }
+    // Anyone can move decorations (position updates only)
+    // apply updates
+    if (typeof percentX === 'number' && typeof percentY === 'number') {
+      target.percentX = percentX;
+      target.percentY = percentY;
+      // also store x/y if provided
+      if (typeof x === 'number') target.x = x;
+      if (typeof y === 'number') target.y = y;
+    } else if (typeof x === 'number' && typeof y === 'number') {
+      target.x = x;
+      target.y = y;
+    }
 
-  decorations[idx] = target;
-  await writeData(decorations);
-  return NextResponse.json(target);
+    decorations[idx] = target;
+    await writeData(decorations);
+    return NextResponse.json(target);
+  });
 }
 
 export async function POST(req: Request) {
   // Allow public additions (any visitor can add). Persist serializable fields only.
   const body = await req.json();
-  const decorations = await readData();
 
   // derive client ip and session from headers
   const ip = (req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown');
@@ -130,31 +148,34 @@ export async function POST(req: Request) {
     // ignore — no blocks file
   }
 
-  const id = `${body.type || 'item'}-${Date.now()}`;
-  const newDecoration: any = {
-    id,
-    type: body.type,
-    name: body.name,
-    scale: body.scale,
-    rotation: body.rotation,
-    data: body.data || {},
-    ip,
-    session,
-  };
+  return await withLock(async () => {
+    const decorations = await readData();
+    const id = `${body.type || 'item'}-${Date.now()}`;
+    const newDecoration: any = {
+      id,
+      type: body.type,
+      name: body.name,
+      scale: body.scale,
+      rotation: body.rotation,
+      data: body.data || {},
+      ip,
+      session,
+    };
 
-  // accept percent positions (preferred) or absolute x/y - store both
-  if (typeof body.percentX === 'number' && typeof body.percentY === 'number') {
-    newDecoration.percentX = body.percentX;
-    newDecoration.percentY = body.percentY;
-  }
-  if (typeof body.x === 'number' && typeof body.y === 'number') {
-    newDecoration.x = body.x;
-    newDecoration.y = body.y;
-  }
+    // accept percent positions (preferred) or absolute x/y - store both
+    if (typeof body.percentX === 'number' && typeof body.percentY === 'number') {
+      newDecoration.percentX = body.percentX;
+      newDecoration.percentY = body.percentY;
+    }
+    if (typeof body.x === 'number' && typeof body.y === 'number') {
+      newDecoration.x = body.x;
+      newDecoration.y = body.y;
+    }
 
-  decorations.push(newDecoration);
-  await writeData(decorations);
-  return NextResponse.json(newDecoration);
+    decorations.push(newDecoration);
+    await writeData(decorations);
+    return NextResponse.json(newDecoration);
+  });
 }
 
 function unauthorized() {
@@ -181,8 +202,10 @@ export async function DELETE(req: Request) {
   const { id } = body;
   if (!id) return new NextResponse(JSON.stringify({ error: 'Missing id' }), { status: 400 });
 
-  const decorations = await readData();
-  const filtered = decorations.filter((d: any) => d.id !== id);
-  await writeData(filtered);
-  return NextResponse.json({ success: true, decorations: filtered });
+  return await withLock(async () => {
+    const decorations = await readData();
+    const filtered = decorations.filter((d: any) => d.id !== id);
+    await writeData(filtered);
+    return NextResponse.json({ success: true, decorations: filtered });
+  });
 }
